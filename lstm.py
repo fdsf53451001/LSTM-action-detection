@@ -120,6 +120,7 @@ def setup_model():
 
     model.compile(optimizer='Adam', loss='binary_crossentropy', metrics=['binary_accuracy'])
     model.summary()
+    keras.utils.plot_model(model, to_file='model.png', show_shapes=True)
 
     return model
 
