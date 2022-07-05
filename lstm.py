@@ -110,8 +110,8 @@ def load_dataset(dataset_path_x,dataset_path_y):
 
 def setup_model():
     model = Sequential()
-    model.add(LSTM(64, return_sequences=True, activation='relu', input_shape=(41,people_count_in_picture*keypoint_per_person))) #frame 骨架node數
-    model.add(LSTM(128, return_sequences=True, activation='relu'))
+    model.add(LSTM(128, return_sequences=True, activation='relu', input_shape=(41,people_count_in_picture*keypoint_per_person))) #frame 骨架node數
+    model.add(LSTM(256, return_sequences=True, activation='relu'))
     model.add(LSTM(64, return_sequences=False, activation='relu')) # cell state
     #  fully connection 全連接層
     model.add(Dense(64, activation='relu'))
@@ -136,6 +136,9 @@ def save_model(model,model_path):
 def load_model(model_path):
     return keras.models.load_model(model_path)
 
+def evaluate(model, text_x, test_Y):
+    model.evaluate(x=text_x, y=test_Y, batch_size=32)
+
 def predict(model, test_X, test_Y):
     res = model.predict(test_X)
     print('predict finish!')
@@ -158,8 +161,10 @@ if __name__ == '__main__':
 
     model_path = 'F:\\Github\\LSTM-action-detection\\model\\train.h5'
 
-    # train_model(model,X_train,Y_train)
-    # save_model(model,model_path)
+    train_model(model,X_train,Y_train)
+    save_model(model,model_path)
 
-    model = load_model(model_path)
-    predict(model, X_test, Y_test)
+    # model = load_model(model_path)
+
+    # predict(model, X_test, Y_test)
+    evaluate(model,X_test,Y_test)
