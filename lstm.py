@@ -68,7 +68,7 @@ def load_train_X(dataset_path_x,dataset_path_y):
 
     dataset_x = np.array(dataset_x)
     dataset_y = np.array(dataset_y)
-    return (dataset_x,dataset_y)
+    return (dataset_x,dataset_y,actions_count)
 
 def load_train_Y(dataset_path_y):
     for action_series in os.listdir(dataset_path_y): # dataset/run/1
@@ -103,15 +103,50 @@ def load_train_Y(dataset_path_y):
 
 
 def load_dataset(dataset_path_x,dataset_path_y):
-    (train_X,train_Y) = load_train_X(dataset_path_x,dataset_path_y)
+    (train_X,train_Y,actions_count) = load_train_X(dataset_path_x,dataset_path_y)
+    (train_X,train_Y) = balance_dataset(train_X,train_Y,actions_count)
     # train_X = train_X.astype('float32')
     return (train_X,train_Y)
+
+def balance_dataset(dataset_X,dataset_Y,actions_count):
+    # get the minumum amount of less happened action
+    min_action_count = actions_count[0]
+    for i in range(type_of_actions):
+        min_action_count = actions_count[i] if actions_count[i]<min_action_count else min_action_count
+
+    actions_credit = {}
+    for i in range(type_of_actions):
+        actions_credit[i] = min_action_count
     
+    # check if the amount of action exceed the min_action_count
+    print(dataset_Y.shape)
+    i=0
+    while i<len(dataset_Y):
+        save = False
+        for x in range(people_count_in_picture):
+            label = list(dataset_Y[i][type_of_actions*x:type_of_actions*(x+1)]).index(1)
+            if(actions_credit[label]>0):
+                # not exceed, save
+                save = True
+                actions_credit[label] -= 1
+
+        if not save:
+            # exceed, delete
+            dataset_X = np.delete(dataset_X,i,0)
+            dataset_Y = np.delete(dataset_Y,i,0)
+            i-=1    # remove one element, index move forward
+        
+        i+=1
+
+    print('----------------------------------')
+    print('balance finish','total count :',len(dataset_X),len(dataset_Y))  
+
+    return dataset_X, dataset_Y
 
 def setup_model():
     model = Sequential()
     model.add(LSTM(128, return_sequences=True, activation='relu', input_shape=(41,people_count_in_picture*keypoint_per_person))) #frame 骨架node數
-    model.add(LSTM(256, return_sequences=True, activation='relu'))
+    model.add(LSTM(128, return_sequences=True, activation='relu'))
     model.add(LSTM(64, return_sequences=False, activation='relu')) # cell state
     #  fully connection 全連接層
     model.add(Dense(64, activation='relu'))
@@ -128,7 +163,7 @@ def train_model(model,train_X,train_Y):
     # print(train_X.shape)
     log_dir = os.path.join('Logs')
     tb_callback = TensorBoard(log_dir=log_dir)
-    model.fit(train_X, train_Y, epochs = 100, batch_size = 32, callbacks=[tb_callback])
+    model.fit(train_X, train_Y, epochs = 50, batch_size = 32, callbacks=[tb_callback])
 
 def save_model(model,model_path):
     model.save(model_path)
@@ -137,6 +172,7 @@ def load_model(model_path):
     return keras.models.load_model(model_path)
 
 def evaluate(model, text_x, test_Y):
+    print('val:')
     model.evaluate(x=text_x, y=test_Y, batch_size=32)
 
 def predict(model, test_X, test_Y):
